@@ -1,0 +1,21 @@
+{{ ansible_managed | comment }}
+
+# MAPNAME	SYSTEM-USERNAME		PG-USERNAME
+barman		barman				postgres
+barman		postgres			postgres
+barman		postgres			sysaux
+barman		postgres			replicator
+barman		barman				postgres
+barman		barman				barman
+barman		patroni_bot			patroni_bot
+barman		zabbix				zabbix
+barman		zabbix				monitor
+
+{% if postgresql_ident is defined %}
+{% for entry in postgresql_ident %}
+
+# {% if entry.description is defined %}{{ entry.description }}{% endif %}
+
+{{ entry.map_name }}		{{ entry.system_username }}		{{ entry.database_username }}
+{% endfor %}
+{% endif %}

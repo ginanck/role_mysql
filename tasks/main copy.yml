@@ -1,0 +1,42 @@
+---
+
+- name: check vars
+  import_tasks: check-vars.yml
+
+- name: install postgresql
+  import_tasks: install.yml
+
+- name: install timescale extension
+  include_tasks: extensions/timescaledb.yml
+  when:
+    - postgresql_extension_timescaledb == true
+
+- name: pre start configuration
+  import_tasks: pre_start_configure.yml
+
+- name: start postgresql service
+  import_tasks: start.yml
+
+- name: create groups
+  import_tasks: groups.yml
+
+- name: create users
+  import_tasks: users.yml
+
+- name: create tablespaces
+  import_tasks: tablespaces.yml
+
+- name: create databases
+  import_tasks: databases.yml
+
+- name: create schemas
+  import_tasks: schemas.yml
+
+- name: create extensions
+  import_tasks: extensions/extensions.yml
+
+- name: run queries
+  import_tasks: queries/queries.yml
+
+#- name: post start configuration
+#  import_tasks: post_start_configure.yml

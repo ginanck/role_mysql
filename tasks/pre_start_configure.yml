@@ -1,0 +1,64 @@
+---
+
+- name: initialize postgres pgdata
+  command: >
+           /usr/pgsql-{{ postgresql_version }}/bin/initdb
+           -D {{ postgresql_directory_pgdata }}
+           --encoding={{ postgresql_initdb.encoding }}
+           --locale={{ postgresql_initdb.locale }}
+           --lc-messages={{ postgresql_initdb.lc_messages }}
+           --lc-monetary={{ postgresql_initdb.lc_monetary }}
+           {% if postgresql_initdb.data_checksums == true %}--data-checksums{% endif %}
+  become: true
+  become_method: sudo
+  become_user: postgres
+  when:
+    - not postgresql_pgdata.stat.exists
+
+- name: create directory for systemd unit
+  file:
+    state: directory
+    path: "/etc/systemd/system/postgresql-{{ postgresql_version }}.service.d"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: create custom systemd unit configuration
+  template:
+    src: postgresql-service-custom.conf.j2
+    dest: "/etc/systemd/system/postgresql-{{ postgresql_version }}.service.d/custom.conf"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart postgresql
+
+- name: create postgresql.conf
+  template:
+    src: postgresql.conf.j2
+    dest: "{{ postgresql_directory_pgdata }}/postgresql.conf"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0600
+  notify:
+    - restart postgresql
+
+- name: create pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgresql_directory_pgdata }}/pg_hba.conf"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0600
+  notify:
+    - reload postgresql
+
+- name: create pg_ident.conf
+  template:
+    src: pg_ident.conf.j2
+    dest: "{{ postgresql_directory_pgdata }}/pg_ident.conf"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0600
+  notify:
+    - reload postgresql

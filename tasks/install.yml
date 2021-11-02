@@ -1,0 +1,109 @@
+---
+- name: PostgreSQL | Install all the required dependencies | yum
+  yum:
+    name: ["ca-certificates","python-psycopg2", "python-pycurl", "glibc-common","epel-release","libselinux-python"]
+    state: present
+
+- name: PostgreSQL | Add PostgreSQL repository | yum
+  yum:
+     name: ["{{ postgresql_pgdg_repository_url }}"]
+  when: postgresql_install_repository
+
+- name: PostgreSQL | Make sure the dependencies are installed | yum
+  yum:
+   name: ["python-psycopg2", "python-pycurl", "glibc-common","libselinux-python"]
+   state: present
+   update_cache: yes
+
+- name: create postgres group
+  group:
+    name: "{{ postgresql_group.name }}"
+    gid: "{{ postgresql_group.gid }}"
+    state: present
+
+- name: create postgres user
+  user:
+    name: "{{ postgresql_user.name }}"
+    uid: "{{ postgresql_user.uid }}"
+    group: "{{ postgresql_user.group }}"
+    shell: "{{ postgresql_user.shell }}"
+    home: "{{ postgresql_user.home }}"
+    create_home: "{{ postgresql_user.create_home }}"
+    state: present
+
+- name: create directories for postgresql
+  file:
+    state: directory
+    path: "{{ item }}"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0700
+  with_items:
+    - "{{ postgresql_directory_scripts }}"
+    - "{{ postgresql_directory_tmp }}"
+    - "{{ postgresql_directory_pre_delivery }}"
+    - "{{ postgresql_directory_main }}"
+    - "{{ postgresql_directory_database }}"
+    - "{{ postgresql_directory_base_backup }}/dumps"
+    - "{{ postgresql_directory_pgdata }}"
+
+- name: create symlink for pgdata
+  file:
+    state: link
+    src: "{{ postgresql_directory_pgdata }}"
+    dest: "{{ postgresql_user.home }}/pgdata"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0700
+
+- name: create symlink for dumps
+  file:
+    state: link
+    src: "{{ postgresql_directory_base_backup }}/dumps"
+    dest: "{{ postgresql_user.home }}/dumps"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0700
+
+- name: create default bash_profile
+  template:
+    src: bash_profile.j2
+    dest: "{{ postgresql_user.home }}/.bash_profile"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0600
+
+- name: check for space reserve file
+  stat:
+    path: "{{ postgresql_directory_base }}/do_not_remove"
+  register: do_not_remove_file
+
+- name: create disk space reserve
+  command: "dd if=/dev/urandom of={{ postgresql_directory_base }}/do_not_remove bs=512MB count=1"
+  when:
+    - not do_not_remove_file.stat.exists
+
+- name: set permissions for space reserve file
+  file:
+    path: "{{ postgresql_directory_base }}/do_not_remove"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0640
+
+- name: install additional repos for postgresql
+  yum:
+    name:
+      - centos-release-scl
+    state: "{{ (postgresql_package_upgrade | bool) | ternary('latest','present') }}"
+
+- name: install postgresql packages and extensions
+  yum:
+    name:
+      - "postgresql{{ postgresql_version |replace('.','') }}-server"
+      - "postgresql{{ postgresql_version |replace('.','') }}-contrib"
+      - python-psycopg2
+      - "pg_qualstats{{ postgresql_version |replace('.','') }}"
+      - "pg_stat_kcache{{ postgresql_version |replace('.','') }}"
+      - "pg_wait_sampling_{{ postgresql_version |replace('.','') }}"
+      - "pg_cron_{{ postgresql_version |replace('.','') }}"
+    state: "{{ (postgresql_package_upgrade | bool) | ternary('latest','present') }}"

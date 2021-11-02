@@ -1,0 +1,8 @@
+---
+
+- name: start postgresql server
+  systemd:
+    name: postgresql-{{ postgresql_version }}
+    daemon_reload: yes
+    enabled: yes
+    state: started

@@ -1,0 +1,479 @@
+{{ ansible_managed | comment }}
+
+listen_addresses = '{{ postgresql_listen_addresses }}'
+port = {{ postgresql_port }}
+
+{% if postgresql_max_connections is not none %}
+max_connections = {{ postgresql_max_connections }}
+{% else %}
+{% if postgresql_installation_environment == "prod" %}
+{% set postgresql_max_connections = 800 %}
+max_connections = {{ postgresql_max_connections }}
+{% endif %}
+{% if postgresql_installation_environment == "dev" %}
+{% set postgresql_max_connections = 100 %}
+max_connections = {{ postgresql_max_connections }}
+{% endif %}
+{% endif %}
+
+{% if postgresql_max_locks_per_transaction is not none %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% else %}
+{% if ansible_memtotal_mb in range(3999) %}
+{% set postgresql_max_locks_per_transaction = 384 %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(4000,7999) %}
+{% set postgresql_max_locks_per_transaction = 1024 %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(8000,15999) %}
+{% set postgresql_max_locks_per_transaction = 2048 %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(16000,29999) %}
+{% set postgresql_max_locks_per_transaction = 3092 %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(30000,63999) %}
+{% set postgresql_max_locks_per_transaction = 4096 %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb >= 64000 %}
+{% set postgresql_max_locks_per_transaction = 8092 %}
+max_locks_per_transaction = {{ postgresql_max_locks_per_transaction }}
+{% endif %}
+{% endif %}
+
+{% if postgresql_max_pred_locks_per_transaction is not none %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% else %}
+{% if ansible_memtotal_mb in range(3999) %}
+{% set postgresql_max_pred_locks_per_transaction = 384 %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(4000,7999) %}
+{% set postgresql_max_pred_locks_per_transaction = 1024 %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(8000,15999) %}
+{% set postgresql_max_pred_locks_per_transaction = 2048 %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(16000,29999) %}
+{% set postgresql_max_pred_locks_per_transaction = 3092 %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb in range(30000,63999) %}
+{% set postgresql_max_pred_locks_per_transaction = 4096 %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% endif %}
+{% if ansible_memtotal_mb >= 64000 %}
+{% set postgresql_max_pred_locks_per_transaction = 8092 %}
+max_pred_locks_per_transaction = {{ postgresql_max_pred_locks_per_transaction }}
+{% endif %}
+{% endif %}
+
+unix_socket_directories = '{{ postgresql_unix_socket_directories }}'
+
+tcp_keepalives_idle = {{ postgresql_tcp_keepalives_idle }}
+tcp_keepalives_interval = {{ postgresql_tcp_keepalives_interval }}
+tcp_keepalives_count = {{ postgresql_tcp_keepalives_count }}
+
+{% if postgresql_shared_buffers is not none %}
+shared_buffers = {{ postgresql_shared_buffers }}
+{% else %}
+{% if postgresql_application_shared | bool == true %}
+{% set postgresql_shared_buffers = (0.15 * (ansible_memtotal_mb - (postgresql_max_connections * postgresql_max_pred_locks_per_transaction * 270 / 1024 / 1024)))|int|abs %}
+shared_buffers = {{ postgresql_shared_buffers }}MB
+{% endif %}
+{% if postgresql_application_shared | bool == false %}
+{% set postgresql_shared_buffers = (0.25 * (ansible_memtotal_mb - (postgresql_max_connections * postgresql_max_pred_locks_per_transaction * 270 / 1024 / 1024)))|int|abs %}
+shared_buffers = {{ postgresql_shared_buffers }}MB
+{% endif %}
+{% endif %}
+
+huge_pages = {{ postgresql_huge_pages }}
+temp_buffers = {{ postgresql_temp_buffers }}
+
+{% if postgresql_work_mem is not none %}
+work_mem = {{ postgresql_work_mem }}
+{% else %}
+{% if ansible_memtotal_mb <= 30000 %}
+work_mem = 128MB
+{% endif %}
+{% if ansible_memtotal_mb > 30000 %}
+work_mem = 256MB
+{% endif %}
+{% endif %}
+
+{% if postgresql_maintenance_work_mem is not none %}
+maintenance_work_mem = {{ postgresql_maintenance_work_mem }}MB
+{% else %}
+{% if ansible_memtotal_mb <= 30000 %}
+maintenance_work_mem = 128MB
+{% endif %}
+{% if ansible_memtotal_mb in range(30001,127999) %}
+maintenance_work_mem = 256MB
+{% endif %}
+{% if ansible_memtotal_mb >= 128000 %}
+maintenance_work_mem = 1024MB
+{% endif %}
+{% endif %}
+
+{% if postgresql_autovacuum_work_mem is not none %}
+autovacuum_work_mem = {{ postgresql_autovacuum_work_mem }}MB
+{% else %}
+{% if ansible_memtotal_mb in range(8000) %}
+autovacuum_work_mem = 64MB
+{% endif %}
+{% if ansible_memtotal_mb in range(8001,16000) %}
+autovacuum_work_mem = 128MB
+{% endif %}
+{% if ansible_memtotal_mb in range(16001,30000) %}
+autovacuum_work_mem = 256MB
+{% endif %}
+{% if ansible_memtotal_mb in range(30001,127999) %}
+autovacuum_work_mem = 512MB
+{% endif %}
+{% if ansible_memtotal_mb >= 128000 %}
+autovacuum_work_mem = 1024MB
+{% endif %}
+{% endif %}
+
+dynamic_shared_memory_type = {{ postgresql_dynamic_shared_memory_type }}
+
+{% if postgresql_shared_preload_libraries is not none %}
+shared_preload_libraries = '{{ postgresql_shared_preload_libraries }}'
+{% else %}
+shared_preload_libraries = '{{ postgresql_shared_preload_libraries_default | join(',') }}'
+{% endif %}
+
+{% if postgresql_extension_pg_stat_statements == true %}
+pg_stat_statements.max = {{ postgresql_pg_stat_statements_max }}
+pg_stat_statements.track = {{ postgresql_pg_stat_statements_track }}
+pg_stat_statements.track_utility = '{{ postgresql_pg_stat_statements_track_utility }}'
+pg_stat_statements.save = '{{ postgresql_pg_stat_statements_save }}'
+{% endif %}
+
+{% if postgresql_extension_pg_stat_statements == true %}
+pg_qualstats.enabled = '{{ postgresql_pg_qualstats_enabled }}'
+pg_qualstats.max = {{ postgresql_pg_qualstats_max }}
+pg_qualstats.track_pg_catalog = '{{ postgresql_pg_qualstats_track_pg_catalog }}'
+pg_qualstats.resolve_oids = '{{ postgresql_pg_qualstats_resolve_oids }}'
+pg_qualstats.track_constants = '{{ postgresql_pg_qualstats_track_constants }}'
+pg_qualstats.sample_rate = '{{ postgresql_pg_qualstats_sample_rate }}'
+{% endif %}
+
+{% if postgresql_extension_pg_wait_sampling == true %}
+pg_wait_sampling.profile_period = {{ postgresql_pg_wait_sampling_profile_period }}
+pg_wait_sampling.profile_pid = '{{ postgresql_pg_wait_sampling_profile_pid }}'
+pg_wait_sampling.profile_queries = '{{ postgresql_pg_wait_sampling_profile_queries }}'
+pg_wait_sampling.history_period = '{{ postgresql_pg_wait_sampling_history_period }}'
+pg_wait_sampling.history_size = '{{ postgresql_pg_wait_sampling_history_size }}'
+{% endif %}
+
+{% if postgresql_module_auto_explain == true %}
+auto_explain.log_analyze = '{{ postgresql_auto_explain_log_analyze }}'
+auto_explain.log_buffers = '{{ postgresql_auto_explain_log_buffers }}'
+auto_explain.log_format = '{{ postgresql_auto_explain_log_format }}'
+auto_explain.log_min_duration = '{{ postgresql_auto_explain_log_min_duration }}'
+auto_explain.log_nested_statements = '{{ postgresql_auto_explain_log_nested_statements }}'
+auto_explain.log_triggers = '{{ postgresql_auto_explain_log_triggers }}'
+auto_explain.log_verbose = '{{ postgresql_auto_explain_log_verbose }}'
+auto_explain.sample_rate = '{{ postgresql_auto_explain_sample_rate }}'
+auto_explain.log_timing = '{{ postgresql_auto_explain_log_timing }}'
+{% endif %}
+
+bgwriter_delay = {{ postgresql_bgwriter_delay }}
+bgwriter_lru_maxpages = {{ postgresql_bgwriter_lru_maxpages }}
+bgwriter_lru_multiplier = {{ postgresql_bgwriter_lru_multiplier }}
+
+{% if postgresql_wal_level is not none %}
+wal_level = {{ postgresql_wal_level }}
+{% else %}
+{% if postgresql_pitr == "false" and postgresql_physical_replication == "false" and postgresql_logical_replication | bool == false %}
+{% if postgresql_installation_environment == "prod" %}
+{% set postgresql_wal_level = "replica" %}
+wal_level = {{ postgresql_wal_level }}
+{% else %}
+{% set postgresql_wal_level = "minimal" %}
+wal_level = {{ postgresql_wal_level }}
+{% endif %}
+{% endif %}
+{% if postgresql_pitr == "false" and postgresql_physical_replication == "true" and postgresql_logical_replication | bool == false %}
+{% set postgresql_wal_level = "replica" %}
+wal_level = {{ postgresql_wal_level }}
+{% endif %}
+{% if postgresql_pitr == "true" and postgresql_physical_replication == "any" and postgresql_logical_replication | bool == false %}
+{% set postgresql_wal_level = "replica" %}
+wal_level = {{ postgresql_wal_level }}
+{% endif %}
+{% if postgresql_pitr == "any" and postgresql_physical_replication == "any" and postgresql_logical_replication | bool == true %}
+{% set postgresql_archive_mode = "on" %}
+wal_level = {{ postgresql_wal_level }}
+{% endif %}
+{% endif %}
+
+synchronous_commit = {{ postgresql_synchronous_commit }}
+wal_writer_delay = {{ postgresql_wal_writer_delay }}
+
+{% if postgresql_max_wal_size is not none %}
+max_wal_size = {{ postgresql_max_wal_size }}MB
+{% else %}
+{% if postgresql_shared_buffers in range(2000) %}
+max_wal_size = 4096MB
+{% endif %}
+{% if postgresql_shared_buffers in range(2001,15999) %}
+max_wal_size = 8192MB
+{% endif %}
+{% if postgresql_shared_buffers in range(16000,63999) %}
+max_wal_size = 16384MB
+{% endif %}
+{% endif %}
+
+{% if postgresql_min_wal_size is not none %}
+min_wal_size = {{ postgresql_min_wal_size }}MB
+{% else %}
+{% if postgresql_shared_buffers in range(2000,31999) %}
+min_wal_size = 2048MB
+{% endif %}
+{% if postgresql_shared_buffers in range(32000,95999) %}
+min_wal_size = 4096MB
+{% endif %}
+{% if postgresql_shared_buffers in range(96000,127999) %}
+min_wal_size = 8192MB
+{% endif %}
+{% if postgresql_shared_buffers >= 128000 %}
+min_wal_size = 16384MB
+{% endif %}
+{% endif %}
+
+checkpoint_timeout = {{ postgresql_checkpoint_timeout }}
+checkpoint_completion_target = {{ postgresql_checkpoint_completion_target }}
+
+{% if postgresql_archive_mode is not none %}
+archive_mode = {{ postgresql_archive_mode }}
+{% else %}
+{% if postgresql_pitr == "false" %}
+{% if postgresql_installation_environment == "prod" %}
+{% set postgresql_archive_mode = "on" %}
+archive_mode = {{ postgresql_archive_mode }}
+{% else %}
+{% set postgresql_archive_mode = "off" %}
+archive_mode = {{ postgresql_archive_mode }}
+{% endif %}
+{% endif %}
+{% if postgresql_pitr == "true" %}
+{% set postgresql_archive_mode = "on" %}
+archive_mode = {{ postgresql_archive_mode }}
+{% endif %}
+{% endif %}
+
+{% if postgresql_archive_command is not none %}
+archive_command = '{{ postgresql_archive_command }}'
+{% else %}
+{% if postgresql_archive_mode == "on" %}
+archive_command = 'true'
+{% endif %}
+{% endif %}
+
+{% if postgresql_archive_timeout is not none %}
+archive_timeout = {{ postgresql_archive_timeout }}min
+{% else %}
+{% if postgresql_archive_mode == "on" %}
+archive_timeout = 10min
+{% endif %}
+{% endif %}
+
+{% if postgresql_max_wal_senders is not none %}
+max_wal_senders = {{ postgresql_max_wal_senders }}
+{% else %}
+{% if postgresql_pitr == "false" and postgresql_physical_replication == "false" %}
+max_wal_senders = 0
+{% endif %}
+{% if postgresql_pitr == "true" or postgresql_physical_replication == "true" %}
+max_wal_senders = 10
+{% endif %}
+{% endif %}
+
+{% if postgresql_wal_keep_segments is not none and postgresql_version is version(13, '<') %}
+wal_keep_segments = {{ postgresql_wal_keep_segments }}
+{% elif postgresql_wal_keep_size is not none and postgresql_version is version(13, '>=') %}
+wal_keep_size = {{ postgresql_wal_keep_size }}
+{% else %}
+{% if postgresql_physical_replication == "false" and postgresql_version is version(13, '<') %}
+wal_keep_segments = 0
+{% elif postgresql_physical_replication == "true" and postgresql_version is version(13, '<') %}
+wal_keep_segments = 128
+{% elif postgresql_physical_replication == "false" and postgresql_version is version(13, '>=') %}
+wal_keep_size = 0
+{% elif postgresql_physical_replication == "true" and postgresql_version is version(13, '>=') %}
+wal_keep_size = '2GB'
+{% endif %}
+{% endif %}
+
+{% if postgresql_max_replication_slots is not none %}
+max_replication_slots = {{ postgresql_max_replication_slots }}
+{% else %}
+{% if postgresql_wal_level == "minimal" or postgresql_wal_level == "archive" %}
+max_replication_slots = 0
+{% endif %}
+{% if postgresql_wal_level == "replica" or postgresql_wal_level == "logical" %}
+max_replication_slots = 12
+{% endif %}
+{% endif %}
+
+{% if postgresql_hot_standby is not none %}
+host_standby = {{ postgresql_hot_standby }}
+{% else %}
+{% if postgresql_physical_replication == "false" %}
+hot_standby = off
+{% endif %}
+{% if postgresql_physical_replication == "true" %}
+hot_standby = on
+{% endif %}
+{% endif %}
+
+seq_page_cost = {{ postgresql_seq_page_cost }}
+
+{% if postgresql_random_page_cost is not none %}
+random_page_cost = {{ postgresql_random_page_cost }}
+{% else %}
+{% if postgresql_disk_type == "hdd" %}
+random_page_cost = 4.0
+{% endif %}
+{% if postgresql_disk_type == "ssd" %}
+random_page_cost = 1.1
+{% endif %}
+{% endif %}
+
+{% if postgresql_effective_cache_size is not none %}
+effective_cache_size = {{ postgresql_effective_cache_size }}MB
+{% else %}
+effective_cache_size = {{ (ansible_memtotal_mb - (postgresql_max_connections * postgresql_max_pred_locks_per_transaction * 270 / 1024 / 1024) - postgresql_shared_buffers)|int|abs }}MB
+{% endif %}
+
+log_destination = '{{ postgresql_log_destination }}'
+logging_collector = {{ postgresql_logging_collector }}
+log_directory = '{{ postgresql_log_directory }}'
+log_filename = '{{ postgresql_log_filename }}'
+log_truncate_on_rotation = {{ postgresql_log_truncate_on_rotation }}
+log_rotation_age = {{ postgresql_log_rotation_age }}
+log_rotation_size = {{ postgresql_log_rotation_size }}
+log_min_duration_statement = {{ postgresql_log_min_duration_statement }}
+log_line_prefix = '{{ postgresql_log_line_prefix }}'
+log_lock_waits = {{ postgresql_log_lock_waits }}
+
+{% if postgresql_log_statement is not none %}
+log_statement = '{{ postgresql_log_statement }}'
+{% else %}
+{% if postgresql_installation_environment == "prod" %}
+log_statement = 'ddl'
+{% endif %}
+{% if postgresql_installation_environment == "dev" %}
+log_statement = 'none'
+{% endif %}
+{% endif %}
+
+log_timezone = '{{ postgresql_log_timezone }}'
+
+track_counts = {{ postgresql_track_counts }}
+
+{% if postgresql_track_io_timing is not none %}
+track_io_timing = {{ postgresql_track_io_timing }}
+{% else %}
+{% if postgresql_installation_environment == "dev" %}
+track_io_timing = off
+{% endif %}
+{% if postgresql_installation_environment == "prod" %}
+track_io_timing = on
+{% endif %}
+{% endif %}
+
+track_activity_query_size = {{ postgresql_track_activity_query_size }}
+
+autovacuum = {{ postgresql_autovacuum }}
+log_autovacuum_min_duration = {{ postgresql_log_autovacuum_min_duration }}
+
+{% if postgresql_autovacuum_max_workers is not none %}
+autovacuum_max_workers = {{ postgresql_autovacuum_max_workers }}
+{% else %}
+{% if postgresql_installation_environment == "dev" %}
+autovacuum_max_workers = 3
+{% endif %}
+{% if postgresql_installation_environment == "prod" %}
+autovacuum_max_workers = 6
+{% endif %}
+{% if postgresql_installation_environment == "prod" and ansible_memtotal_mb >= 512000 %}
+autovacuum_max_workers = 9
+{% endif %}
+{% endif %}
+
+autovacuum_vacuum_threshold = {{ postgresql_autovacuum_vacuum_threshold }}
+autovacuum_analyze_threshold = {{ postgresql_autovacuum_analyze_threshold }}
+
+{% if postgresql_autovacuum_vacuum_scale_factor is not none %}
+autovacuum_vacuum_scale_factor = {{ postgresql_autovacuum_vacuum_scale_factor }}
+{% else %}
+{% if postgresql_installation_environment == "dev" %}
+autovacuum_vacuum_scale_factor = 0.002
+{% endif %}
+{% if postgresql_installation_environment == "prod" %}
+autovacuum_vacuum_scale_factor = 0.0007
+{% endif %}
+{% endif %}
+
+{% if postgresql_autovacuum_analyze_scale_factor is not none %}
+autovacuum_analyze_scale_factor = {{ postgresql_autovacuum_analyze_scale_factor }}
+{% else %}
+{% if postgresql_installation_environment == "dev" %}
+autovacuum_analyze_scale_factor = 0.002
+{% endif %}
+{% if postgresql_installation_environment == "prod" and postgresql_disk_type == "hdd" %}
+autovacuum_analyze_scale_factor = 0.0001
+{% endif %}
+{% if postgresql_installation_environment == "prod" and postgresql_disk_type == "ssd" %}
+autovacuum_analyze_scale_factor = 0.0007
+{% endif %}
+{% endif %}
+
+autovacuum_freeze_max_age = {{ postgresql_autovacuum_freeze_max_age }}
+
+{% if postgresql_autovacuum_vacuum_cost_delay is not none %}
+autovacuum_vacuum_cost_delay = {{ postgresql_autovacuum_vacuum_cost_delay }}ms
+{% else %}
+{% if postgresql_installation_environment == "dev" %}
+autovacuum_vacuum_cost_delay = 20ms
+{% endif %}
+{% if postgresql_installation_environment == "prod" and postgresql_disk_type == "hdd" %}
+autovacuum_vacuum_cost_delay = 40ms
+{% endif %}
+{% if postgresql_installation_environment == "prod" and postgresql_disk_type == "ssd" %}
+autovacuum_vacuum_cost_delay = 12ms
+{% endif %}
+{% endif %}
+
+{% if postgresql_autovacuum_vacuum_cost_limit is not none %}
+autovacuum_vacuum_cost_limit = {{ postgresql_autovacuum_vacuum_cost_limit }}
+{% else %}
+{% if postgresql_installation_environment == "dev" %}
+autovacuum_vacuum_cost_limit = 500
+{% endif %}
+{% if postgresql_installation_environment == "prod" and postgresql_disk_type == "hdd" %}
+autovacuum_vacuum_cost_limit = 500
+{% endif %}
+{% if postgresql_installation_environment == "prod" and postgresql_disk_type == "ssd" %}
+autovacuum_vacuum_cost_limit = 1200
+{% endif %}
+{% endif %}
+
+datestyle = '{{ postgresql_datestyle }}'
+timezone = '{{ postgresql_timezone }}'
+
+lc_messages = '{{ postgresql_lc_messages }}'
+lc_monetary = '{{ postgresql_lc_monetary }}'
+lc_numeric = '{{ postgresql_lc_numeric }}'
+lc_time = '{{ postgresql_lc_time }}'
+
+default_text_search_config = '{{ postgresql_default_text_search_config }}'

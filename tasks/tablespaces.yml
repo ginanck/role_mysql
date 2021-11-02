@@ -1,0 +1,28 @@
+---
+
+- name: create directories for tablespaces
+  file:
+    state: directory
+    recurse: yes
+    path: "{{ item.location | default(postgresql_directory_database + '/' + item.name) }}"
+    owner: "{{ postgresql_user.name }}"
+    group: "{{ postgresql_group.name }}"
+    mode: 0700
+  with_items:
+    - "{{ postgresql_tablespaces_all }}"
+
+- name: manage tablespaces
+  block:
+    - name: create tablespace
+      postgresql_tablespace:
+        location: "{{ item.location | default(postgresql_directory_database + '/' + item.name) }}"
+        owner: "{{ item.owner }}"
+        port: "{{ postgresql_port }}"
+        state: present
+        tablespace: "{{ item.name }}"
+      with_items:
+        - "{{ postgresql_tablespaces_all }}"
+
+  become: true
+  become_method: sudo
+  become_user: postgres

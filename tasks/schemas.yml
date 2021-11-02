@@ -1,0 +1,71 @@
+---
+
+- name: create schemas
+  block:
+    - name: create schema for databases (schema = owner)
+      postgresql_schema:
+        cascade_drop: "{{ item.1.cascade_drop | default('no') }}"
+        database: "{{ item.0.name }}"
+        name: "{{ item.1.name }}"
+        owner: "{{ item.1.name }}"
+        port: "{{ postgresql_port }}"
+        state: "{{ item.1.state | default('present') }}"
+      with_subelements:
+        - "{{ postgresql_databases_all }}"
+        - schema
+      when:
+        - item.1.name != 'public' and ('owner' not in item.1)
+
+    - name: create schema for databases (schema != owner)
+      postgresql_schema:
+        cascade_drop: "{{ item.1.cascade_drop | default('no') }}"
+        database: "{{ item.0.name }}"
+        name: "{{ item.1.name }}"
+        owner: "{{ item.1.owner }}"
+        port: "{{ postgresql_port }}"
+        state: "{{ item.1.state | default('present') }}"
+      with_subelements:
+        - "{{ postgresql_databases_all }}"
+        - schema
+      when:
+        - item.1.name != 'public' and ('owner' in item.1)
+
+    - name: grant all on schema
+      postgresql_query:
+        db: "{{ item.0.name }}"
+        port: "{{ postgresql_port }}"
+        query: GRANT ALL ON SCHEMA {{ item.0.name }}_{{ item.1.name }} TO {{ item.0.name }}_{{ item.1.name }}
+      with_subelements:
+        - "{{ postgresql_databases_all }}"
+        - schema
+      when:
+        - item.1.name != 'public'
+        - ('state' in item.1) and item.1.state != 'absent'
+
+    - name: grant usage on schema on read_role
+      postgresql_query:
+        db: "{{ item.0.name }}"
+        port: "{{ postgresql_port }}"
+        query: GRANT USAGE ON SCHEMA {{ item.0.name }}_{{ item.1.name }} TO {{ item.0.name }}_read_role
+      with_subelements:
+        - "{{ postgresql_databases_all }}"
+        - schema
+      when:
+        - (('read_role' not in item.0) or item.0.read_role | bool == true) and item.1.name != 'public'
+        - ('state' in item.1) and item.1.state != 'absent'
+
+    - name: alter default privileges in schema and grant select on tables to read_role
+      postgresql_query:
+        db: "{{ item.0.name }}"
+        port: "{{ postgresql_port }}"
+        query: ALTER DEFAULT PRIVILEGES IN SCHEMA {{ item.0.name }}_{{ item.1.name }} GRANT SELECT ON TABLES TO {{ item.0.name }}_read_role
+      with_subelements:
+        - "{{ postgresql_databases_all }}"
+        - schema
+      when:
+        - (('read_role' not in item.0) or item.0.read_role | bool == true) and item.1.name != 'public'
+        - ('state' in item.1) and item.1.state != 'absent'
+
+  become: true
+  become_method: sudo
+  become_user: postgres

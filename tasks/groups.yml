@@ -1,0 +1,26 @@
+---
+
+- name: create groups
+  block:
+    - name: create groups (with privileges)
+      postgresql_user:
+        name: "{{ item.name }}"
+        role_attr_flags: "{{ item.role_attr_flags | default(['NOLOGIN','NOSUPERUSER','INHERIT','NOCREATEDB','NOCREATEROLE','NOREPLICATION']) | join(',') }}"
+        port: "{{ postgresql_port }}"
+        priv: "{{ item.priv | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      with_items:
+        - "{{ postgresql_groups_all }}"
+
+    - name: create comment for groups
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        query: COMMENT ON ROLE {{ item.name }} IS '{{ item.comment }}'
+      with_items:
+        - "{{ postgresql_groups_all }}"
+      when:
+        - ('comment' in item)
+
+  become: true
+  become_method: sudo
+  become_user: postgres

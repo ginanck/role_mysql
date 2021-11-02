@@ -1,0 +1,65 @@
+---
+
+- name: create users
+  block:
+    - name: create users (with database)
+      postgresql_user:
+        name: "{{ item.database }}_{{ item.name }}"
+        password: "{{ item.password | default(omit) }}"
+        role_attr_flags: "{{ item.role_attr_flags | default(['LOGIN','NOSUPERUSER','INHERIT','NOCREATEDB','NOCREATEROLE','NOREPLICATION']) | join(',') }}"
+        port: "{{ postgresql_port }}"
+        priv: "{{ item.priv | default(omit) }}"
+        expires: "{{ item.expires | default('infinity') }}"
+        groups: "{{ item.groups | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      with_items:
+        - "{{ postgresql_users_all }}"
+      when:
+        - item.database is not none and item.database is defined and ('database' in item)
+
+    - name: create users (without database)
+      postgresql_user:
+        name: "{{ item.name }}"
+        password: "{{ item.password | default(omit) }}"
+        role_attr_flags: "{{ item.role_attr_flags | default(['LOGIN','NOSUPERUSER','INHERIT','NOCREATEDB','NOCREATEROLE','NOREPLICATION']) | join(',') }}"
+        port: "{{ postgresql_port }}"
+        priv: "{{ item.priv | default(omit) }}"
+        expires: "{{ item.expires | default('infinity') }}"
+        groups: "{{ item.groups | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      with_items:
+        - "{{ postgresql_users_all }}"
+      when:
+        - ('database' not in item)
+
+    - name: create comment for database owners
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        query: COMMENT ON ROLE {{ item.owner }} IS '{{ item.owner }} db owner role'
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('owner' in item) and item.owner != 'postgres'
+
+    - name: create comment for users
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        query: COMMENT ON ROLE {{ item.name }} IS '{{ item.comment }}'
+      with_items:
+        - "{{ postgresql_users_all }}"
+      when:
+        - ('comment' in item)
+
+    - name: create read role
+      postgresql_user:
+        name: "{{ item.name }}_read_role"
+        role_attr_flags: NOSUPERUSER,NOINHERIT,NOCREATEDB,NOCREATEROLE,NOREPLICATION
+        port: "{{ postgresql_port }}"
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('read_role' not in item) or item.read_role | bool == true
+
+  become: true
+  become_method: sudo
+  become_user: postgres

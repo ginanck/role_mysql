@@ -1,0 +1,249 @@
+---
+
+- name: check postgresql_role
+  fail:
+    msg: "postgresql_role must be configured"
+  when:
+    - postgresql_role not in ['master','slave']
+
+- name: check postgresql_installation_type
+  fail:
+    msg: "postgresql_installation_type must be configured"
+  when:
+    - postgresql_installation_type not in ['master','patroni']
+
+- name: check postgresql_installation_environment
+  fail:
+    msg: "postgresql_installation_environment must be configured"
+  when:
+    - postgresql_installation_environment not in ['prod','dev']
+
+- name: check postgresql_application_shared
+  fail:
+    msg: "postgresql_application_shared must be configured"
+  when:
+    - postgresql_application_shared not in [true,false]
+
+- name: check postgresql_application_shared
+  debug:
+    msg: "postgresql will be configured to share resources with applications"
+  when:
+    - postgresql_application_shared == true
+
+- name: check postgresql_application_shared
+  debug:
+    msg: "postgresql settings will be configured for db only"
+  when:
+    - postgresql_application_shared == false
+
+- name: check postgresql_admin_user_name, postgresql_admin_user_password
+  fail:
+    msg: "postgresql_admin_user_name, postgresql_admin_user_password must be configured"
+  when:
+    - (postgresql_admin_user_name is none or postgresql_admin_user_name is undefined) or
+      (postgresql_admin_user_password is none or postgresql_admin_user_password is undefined)
+
+- name: check postgresql_monitor_user_name, postgresql_monitor_user_password
+  fail:
+    msg: "postgresql_monitor_user_name, postgresql_monitor_user_password must be configured"
+  when:
+    - (postgresql_monitor_user_name is none or postgresql_monitor_user_name is undefined) or
+      (postgresql_monitor_user_password is none or postgresql_monitor_user_password is undefined)
+
+- name: check postgresql_log_timezone/postgresql_timezone
+  fail:
+    msg: "postgresql_timezone or postgresql_log_timezone/postgresql_timezone must be configured"
+  when:
+    - postgresql_timezone is none or postgresql_log_timezone is none
+
+- name: check postgresql_databases
+  debug:
+    msg: "no databases will be created during postgresql installation"
+  when:
+    - postgresql_databases is none or postgresql_databases is undefined
+
+- name: check if pgdata exist
+  stat:
+    path: "{{ postgresql_directory_pgdata }}/PG_VERSION"
+  register: postgresql_pgdata
+
+- name: check postgresql_disk_type
+  fail:
+    msg: "postgresql_disk_type must be hdd/ssd"
+  when:
+    - postgresql_disk_type not in ['hdd','ssd']
+
+- name: check postgresql_pitr
+  fail:
+    msg: "postgresql_pitr must be true/false/any"
+  when:
+    - postgresql_pitr not in ['true','false','any']
+
+- name: check postgresql_physical_replication
+  fail:
+    msg: "postgresql_physical_replication must be true/false/any"
+  when:
+    - postgresql_physical_replication not in ['true','false','any']
+
+- name: check postgresql_logical_replication
+  fail:
+    msg: "postgresql_logical_replication must be true/false"
+  when:
+    - postgresql_logical_replication not in [true,false]
+
+- name: check postgresql_extension_pg_stat_statements
+  fail:
+    msg: "postgresql_extension_pg_stat_statements must be true/false"
+  when:
+    - postgresql_extension_pg_stat_statements not in [true,false]
+
+- name: check postgresql_extension_powa
+  fail:
+    msg: "postgresql_extension_powa must be true/false"
+  when:
+    - postgresql_extension_powa not in [true,false]
+
+- name: check postgresql_extension_pg_qualstats
+  fail:
+    msg: "postgresql_extension_pg_qualstats must be true/false"
+  when:
+    - postgresql_extension_pg_qualstats not in [true,false]
+
+- name: check postgresql_extension_pg_stat_kcache
+  fail:
+    msg: "postgresql_extension_pg_stat_kcache must be true/false"
+  when:
+    - postgresql_extension_pg_stat_kcache not in [true,false]
+
+- name: check postgresql_extension_pg_wait_sampling
+  fail:
+    msg: "postgresql_extension_pg_wait_sampling must be true/false"
+  when:
+    - postgresql_extension_pg_wait_sampling not in [true,false]
+
+- name: check postgresql_extension_timescaledb
+  fail:
+    msg: "postgresql_extension_timescaledb must be true/false"
+  when:
+    - postgresql_extension_timescaledb not in [true,false]
+
+- name: check postgresql_module_auto_explain
+  fail:
+    msg: "postgresql_module_auto_explain must be true/false"
+  when:
+    - postgresql_module_auto_explain not in [true,false]
+
+- name: set postgresql_shared_preload_libraries_default
+  set_fact:
+    postgresql_shared_preload_libraries_default: |
+                                                 {% set result = [] %}
+                                                 {%- if postgresql_extension_pg_stat_statements == true %}
+                                                 {% set entry = result.append('pg_stat_statements') %}
+                                                 {% endif %}
+                                                 {% if postgresql_extension_powa == true %}
+                                                 {% set entry = result.append('powa') %}
+                                                 {% endif %}
+                                                 {% if postgresql_extension_pg_qualstats == true %}
+                                                 {% set entry = result.append('pg_qualstats') %}
+                                                 {% endif %}
+                                                 {% if postgresql_extension_pg_stat_kcache == true %}
+                                                 {% set entry = result.append('pg_stat_kcache') %}
+                                                 {% endif %}
+                                                 {% if postgresql_extension_pg_wait_sampling == true %}
+                                                 {% set entry = result.append('pg_wait_sampling') %}
+                                                 {% endif %}
+                                                 {% if postgresql_module_auto_explain == true %}
+                                                 {% set entry = result.append('auto_explain') %}
+                                                 {% endif %}
+                                                 {% if postgresql_extension_timescaledb == true %}
+                                                 {% set entry = result.append('timescaledb') %}
+                                                 {%- endif %}
+                                                 {{ result }}
+
+- name: set postgresql_databases_all
+  set_fact:
+    postgresql_databases_all: "{{ postgresql_databases_default + postgresql_databases }}"
+
+- name: set postgresql_groups_default
+  set_fact:
+    postgresql_groups_default: |
+                               {% set result_owner_users = [] -%}
+                               {%- for item in postgresql_databases_all -%}
+                               {% if 'owner' not in item %}
+                               {% set ignored = result_owner_users.extend([{
+                               'name': item.name,
+                               'role_attr_flags': ['NOLOGIN','NOSUPERUSER','INHERIT','NOCREATEDB','NOCREATEROLE','NOREPLICATION'],
+                               'comment': item.name + ' db owner role'
+                               }]) -%}
+                               {% endif %}
+                               {%- endfor %}
+                               {{ result_owner_users }}
+  when:
+    - postgresql_databases_all | count > 0
+
+- name: set postgresql_users_default
+  set_fact:
+    postgresql_users_default: |
+                              {% set result_users = [] -%}
+                              {% set ignored = result_users.extend([{
+                              'name': postgresql_admin_user_name,
+                              'password': postgresql_admin_user_password,
+                              'role_attr_flags': postgresql_admin_user_role_attr_flags,
+                              'comment': postgresql_admin_user_comment
+                              }]) -%}
+                              {% set ignored = result_users.extend([{
+                              'name': postgresql_monitor_user_name,
+                              'password': postgresql_monitor_user_password,
+                              'role_attr_flags': postgresql_monitor_user_role_attr_flags,
+                              'comment': postgresql_monitor_user_comment
+                              }]) -%}
+                              {{ result_users }}
+
+- name: set postgresql_tablespaces_default
+  set_fact:
+    postgresql_tablespaces_default: |
+                                    {% set result_data = [] -%}
+                                    {%- for item in postgresql_databases_all -%}
+                                    {% if 'data_tablespace' not in item %}
+                                    {% if 'owner' not in item %}
+                                    {% set ignored = result_data.extend([{
+                                    'name': item.name + '_data',
+                                    'owner': item.name,
+                                    'location': postgresql_directory_database + '/' + item.name + '_data'
+                                    }]) -%}
+                                    {% else %}
+                                    {% set ignored = result_data.extend([{
+                                    'name': item.name + '_data',
+                                    'owner': item.owner,
+                                    'location': postgresql_directory_database + '/' + item.name + '_data'
+                                    }]) -%}
+                                    {% endif %}
+                                    {% endif %}
+                                    {%- endfor %}
+                                    {% set result_temp = [] -%}
+                                    {%- for item in postgresql_databases_all -%}
+                                    {% if 'temp_tablespace' not in item %}
+                                    {% if 'owner' not in item %}
+                                    {% set ignored = result_temp.extend([{
+                                    'name': item.name + '_temp',
+                                    'owner': item.name,
+                                    'location': postgresql_directory_database + '/' + item.name + '_temp'
+                                    }]) -%}
+                                    {% else %}
+                                    {% set ignored = result_temp.extend([{
+                                    'name': item.name + '_temp',
+                                    'owner': item.owner,
+                                    'location': postgresql_directory_database + '/' + item.name + '_temp'
+                                    }]) -%}
+                                    {% endif %}
+                                    {% endif %}
+                                    {%- endfor %}
+                                    {{ result_data + result_temp }}
+  when:
+    - postgresql_databases_all | count > 0
+
+- name: set postgresql_tablespaces_all, postgresql_users_all, postgresql_groups_all
+  set_fact:
+    postgresql_tablespaces_all: "{{ postgresql_tablespaces_default + postgresql_tablespaces }}"
+    postgresql_users_all: "{{ postgresql_users_default + postgresql_users }}"
+    postgresql_groups_all: "{{ postgresql_groups_default + postgresql_groups }}"

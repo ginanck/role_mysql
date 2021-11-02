@@ -1,0 +1,43 @@
+{{ ansible_managed | comment }}
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+{% if postgresql_hba_local is defined %}
+{% for entry in postgresql_hba_local %}
+ {% if entry.description is defined %}{{ entry.description | comment('plain', prefix='\n', postfix='') }}{% endif %}
+{% if entry.type is defined %}{{ entry.type }}{% endif %}	{% if entry.database is defined %}{{ entry.database }}{% endif %}	{% if entry.user is defined %}{{ entry.user }}{% endif %}		{% if entry.address is defined %}{{ entry.address }}{% endif %}		{% if entry.auth_method is defined %}{{ entry.auth_method }}{% endif %} {% if entry.auth_options is defined %}{{ entry.auth_options }}{% endif %}
+{% endfor %}
+{% endif %}
+{% if postgresql_hba_lo is defined %}
+{% for entry in postgresql_hba_lo %}
+ {% if entry.description is defined %}{{ entry.description | comment('plain', prefix='\n', postfix='') }}{% else %}
+
+{% endif %}
+{% if entry.type is defined %}{{ entry.type }}{% endif %}       {% if entry.database is defined %}{{ entry.database }}{% endif %}       {% if entry.user is defined %}{{ entry.user }}{% endif %}               {% if entry.address is defined %}{{ entry.address }}{% endif %}         {% if entry.auth_method is defined %}{{ entry.auth_method }}{% endif %} {% if entry.auth_options is defined %}{{ entry.auth_options }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if postgresql_hba_devex is defined and postgresql_hba_allow_devex | bool == true %}
+{% for entry in postgresql_hba_devex %}
+ {% if entry.description is defined %}{{ entry.description | comment('plain', prefix='\n', postfix='') }}{% else %}
+
+{% endif %}
+{% if entry.type is defined %}{{ entry.type }}{% endif %}       {% if entry.database is defined %}{{ entry.database }}{% endif %}       {% if entry.user is defined %}{{ entry.user }}{% endif %}               {% if entry.address is defined %}{{ entry.address }}{% endif %}         {% if entry.auth_method is defined %}{{ entry.auth_method }}{% endif %} {% if entry.auth_options is defined %}{{ entry.auth_options }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if postgresql_hba_workstations is defined and postgresql_hba_allow_workstations | bool  == true %}
+{% for entry in postgresql_hba_workstations %}
+ {% if entry.description is defined %}{{ entry.description | comment('plain', prefix='\n', postfix='') }}{% else %}
+
+{% endif %}
+{% if entry.type is defined %}{{ entry.type }}{% endif %}       {% if entry.database is defined %}{{ entry.database }}{% endif %}       {% if entry.user is defined %}{{ entry.user }}{% endif %}               {% if entry.address is defined %}{{ entry.address }}{% endif %}         {% if entry.auth_method is defined %}{{ entry.auth_method }}{% endif %} {% if entry.auth_options is defined %}{{ entry.auth_options }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if postgresql_hba_custom is defined %}
+{% for entry in postgresql_hba_custom %}
+ {% if entry.description is defined %}{{ entry.description | comment('plain', prefix='\n', postfix='') }}{% else %}
+
+{% endif %}
+{% if entry.type is defined %}{{ entry.type }}{% endif %}       {% if entry.database is defined %}{{ entry.database }}{% endif %}       {% if entry.user is defined %}{{ entry.user }}{% endif %}               {% if entry.address is defined %}{{ entry.address }}{% endif %}         {% if entry.auth_method is defined %}{{ entry.auth_method }}{% endif %} {% if entry.auth_options is defined %}{{ entry.auth_options }}{% endif %}
+{% endfor %}
+{% endif %}

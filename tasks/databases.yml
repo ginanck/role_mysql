@@ -1,0 +1,134 @@
+---
+
+- name: create databases
+  block:
+    - name: collect postgresql databases (before create)
+      postgresql_info:
+        filter: databases
+      register: postgresql_register_databases_before
+
+    - name: create databases (owner defined)
+      postgresql_db:
+        conn_limit: "{{ item.conn_limit | default('-1') }}"
+        encoding: "{{ item.encoding | default('UTF8') }}"
+        lc_collate: "{{ item.lc_collate | default('en_US.utf8') }}"
+        lc_ctype: "{{ item.lc_ctype | default('en_US.utf8') }}"
+        port: "{{ postgresql_port }}"
+        name: "{{ item.name }}"
+        owner: "{{ item.owner }}"
+        state: "{{ item.state | default('present') }}"
+        tablespace: "{{ item.data_tablespace | default(item.name + '_data') }}"
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('owner' in item)
+
+    - name: create databases (owner undefined)
+      postgresql_db:
+        conn_limit: "{{ item.conn_limit | default('-1') }}"
+        encoding: "{{ item.encoding | default('UTF8') }}"
+        lc_collate: "{{ item.lc_collate | default('en_US.utf8') }}"
+        lc_ctype: "{{ item.lc_ctype | default('en_US.utf8') }}"
+        port: "{{ postgresql_port }}"
+        name: "{{ item.name }}"
+        owner: "{{ item.name }}"
+        state: "{{ item.state | default('present') }}"
+        tablespace: "{{ item.data_tablespace | default(item.name + '_data') }}"
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('owner' not in item)
+
+    - name: alter database set temp tablespace (default)
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        db: "{{ item.name }}"
+        query: ALTER DATABASE {{ item.name }} SET temp_tablespaces={{ item.name }}_temp
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('temp_tablespace' not in item)
+
+    - name: alter database set temp tablespace (non default)
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        db: "{{ item.name }}"
+        query: ALTER DATABASE {{ item.name }} SET temp_tablespaces={{ item.temp_tablespace }}
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('temp_tablespace' in item)
+
+    - name: drop public schema
+      postgresql_schema:
+        db: "{{ item.name }}"
+        name: public
+        state: absent
+        port: "{{ postgresql_port }}"
+      vars:
+        schema_list: "{{ item.schema | selectattr('name', 'defined') | map(attribute='name') | list }}"
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('public' not in schema_list)
+
+    - name: grant read access for monitoring user
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        db: "{{ item.name }}"
+        query: GRANT {{ item.name }}_read_role TO {{ postgresql_monitor_user_name }}
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('monitor_user' not in item) or item.monitor_user | bool == true
+
+    - name: create schema for admin user
+      postgresql_schema:
+        db: "{{ item.name }}"
+        name: "{{ postgresql_admin_user_name }}"
+        state: present
+        port: "{{ postgresql_port }}"
+        owner: "{{ postgresql_admin_user_name }}"
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('admin_user' not in item) or item.admin_user | bool == true
+    
+    - name: grant all on schema to admin user
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        db: "{{ item.name }}"
+        query: GRANT ALL ON SCHEMA {{ postgresql_admin_user_name }} TO {{ postgresql_admin_user_name }}
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('admin_user' not in item) or item.admin_user | bool == true
+
+    - name: grant usage on schema to admin user
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        db: "{{ item.name }}"
+        query: GRANT USAGE ON SCHEMA {{ postgresql_admin_user_name }} TO {{ item.name }}_read_role
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('read_role' not in item) or item.read_role | bool == true
+    
+    - name: alter default privileges in schema for admin user
+      postgresql_query:
+        port: "{{ postgresql_port }}"
+        db: "{{ item.name }}"
+        query: ALTER DEFAULT PRIVILEGES IN SCHEMA {{ postgresql_admin_user_name }} GRANT SELECT ON TABLES TO {{ item.name }}_read_role
+      with_items:
+        - "{{ postgresql_databases_all }}"
+      when:
+        - ('read_role' not in item) or item.read_role | bool == true
+
+    - name: collect postgresql databases (after create)
+      postgresql_info:
+        filter: databases
+      register: postgresql_register_databases_after
+
+  become: true
+  become_method: sudo
+  become_user: postgres
