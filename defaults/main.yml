@@ -1,2 +1,24 @@
 ---
 # defaults file for role-mysql
+
+mysqld_user: "mysql"
+mysqld_datadir: "/var/lib/mysql"
+mysqld_socket: "/var/lib/mysql/mysql.sock"
+
+mysqld_log_error: "/var/log/mysqld.log"
+mysqld_pidfile: "/var/run/mysqld/mysqld.pid"
+
+mysqld_port: "3306"
+mysqld_bind_address: "0.0.0.0"
+mysqld_validate_password_policy: "LOW"
+
+mysqld_root_user:
+  - name: "root"
+    password: "LzdnvxP2UWX6lZLwQfkDms"
+
+mysqld_platform_users:
+  - name: "dxfina"
+    password: "y0pohdCdRxRdCZ59Tp6elA"
+
+mysqld_databses:
+  - name: "dxfinadb"
