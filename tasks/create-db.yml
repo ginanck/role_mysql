@@ -1,11 +1,26 @@
 ---
 
+- name: check database
+  include_tasks: check-db.yml
+
 - name: set_fact database list
   set_fact: 
-    loop_item: "{{ item.db }}"
+    databases: "{{ db.db }}"
 
 - name: create databases
   shell:
-    cmd: mysql -e "CREATE DATABASE {{ loop_item.database }};"
+    cmd: mysql -e "CREATE DATABASE {{ item.database }};"
   when:
-    - ('{{ loop_item.database }}' not in {{ db_list }})
+    - ('{{ item.database }}' not in {{ db_list }})
+  with_items:
+    - "{{ databases }}"
+
+# - name: create databases
+#   debug:
+#     msg: "{{ item.database }}"
+#   with_items:
+#     - "{{ databases }}"
+
+# - name: create databases
+#   debug:
+#     msg: "{{ db_list }}"

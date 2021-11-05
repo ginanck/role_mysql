@@ -1,0 +1,10 @@
+---
+
+- name: check users
+  shell:
+    cmd: mysql -e "SELECT user FROM mysql.user;"
+  register: user_result
+
+- name: set_fact user list
+  set_fact: 
+    user_list: "{{ user_result.stdout.split() }}"

@@ -1,0 +1,10 @@
+---
+
+- name: show database list
+  shell:
+    cmd: mysql -e "show databases;" | grep -iv "-" | xargs
+  register: db_result
+
+- name: set_fact database list
+  set_fact: 
+    db_list: "{{ db_result.stdout.split() }}"

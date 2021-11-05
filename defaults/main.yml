@@ -18,7 +18,7 @@ mysqld_root_user:
     my_cnf_path: /root/.my.cnf
     temp_pass_check_file: /etc/my.cnf.txt
 
-mysqld_platform_db:
+mysqld_db:
   - db:
       database: "dxfina_db"
       host: localhost

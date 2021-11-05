@@ -1,14 +1,36 @@
 ---
 
-- name: set_fact database list
+- name: check users
+  include_tasks: check-user.yml
+
+- name: set_fact user list
   set_fact: 
-    loop_item: "{{ item.db }}"
+    users: "{{ db.db }}"
 
 - name: create users
   shell: |
-    mysql -e "CREATE USER '{{ item.username }}'@'{{ loop_item.host }}' IDENTIFIED BY '{{ item.password }}';"
+    mysql -e "CREATE USER '{{ item.username }}'@'{{ item.host }}' IDENTIFIED BY '{{ item.password }}';"
+    mysql -e "GRANT ALL PRIVILEGES ON {{ users.database }}.* TO '{{ item.username }}'@'{{ item.host }}' IDENTIFIED BY '{{ item.password }}' WITH GRANT OPTION;"
     mysql -e "FLUSH PRIVILEGES;"
   when:
     - ('{{ item.username }}' not in {{ user_list }})
   with_items:
-    - "{{ loop_item.users }}"
+    - "{{ users.users }}"
+
+# - name: set_fact user list
+#   set_fact: 
+#     user: "{{ users.users }}"
+
+# - name: get remote address
+#   include_tasks: grant-remote.yml
+#   with_items:
+#     - "{{ user }}"
+#   loop_control:
+#     loop_var: remote
+
+
+# - name: get remote address
+#   debug:
+#     msg: "{{ item.username }}"
+#   with_items:
+#     - "{{ user }}"
