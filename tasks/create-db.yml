@@ -1,0 +1,11 @@
+---
+
+- name: set_fact database list
+  set_fact: 
+    loop_item: "{{ item.db }}"
+
+- name: create databases
+  shell:
+    cmd: mysql -e "CREATE DATABASE {{ loop_item.database }};"
+  when:
+    - ('{{ loop_item.database }}' not in {{ db_list }})

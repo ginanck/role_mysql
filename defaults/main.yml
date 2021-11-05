@@ -14,11 +14,22 @@ mysqld_validate_password_policy: "LOW"
 
 mysqld_root_user:
   - name: "root"
-    password: "LzdnvxP2UWX6lZLwQfkDms"
+    password: "LzdnvxP2UWX6lZLwQ."
+    my_cnf_path: /root/.my.cnf
+    temp_pass_check_file: /etc/my.cnf.txt
 
-mysqld_platform_users:
-  - name: "dxfina"
-    password: "y0pohdCdRxRdCZ59Tp6elA"
-
-mysqld_databses:
-  - name: "dxfinadb"
+mysqld_platform_db:
+  - db:
+      database: "dxfina_db"
+      host: localhost
+      users:
+      - username: "dxfina_editor"
+        password: "y0pohdCdRxRdCZ59T."
+      - username: "dxfina_admin"
+        password: "y0pohdCdRxRdCZ59T."
+  - db:
+      database: "wordpress_db"
+      host: localhost
+      users:
+      - username: "wordpress_admin"
+        password: "y0pohdCdRxRdCZ59T."

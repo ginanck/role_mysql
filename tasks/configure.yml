@@ -1,11 +1,11 @@
 ---
 
-# - name: start mysql server
-#   systemd:
-#     name: mysqld
-#     daemon_reload: yes
-#     enabled: yes
-#     state: started
+- name: start mysql server
+  systemd:
+    name: mysqld
+    daemon_reload: yes
+    enabled: yes
+    state: started
 
 - name: Check that the somefile.conf exists
   stat:
@@ -69,7 +69,7 @@
   when:
     - "{{ stat_result.results[0].stat.exists }} is false"
 
-- name: mysql temporary password if changed true, else false
+- name: mysql temporary password if change control file
   copy:
     content: |
       true
@@ -80,45 +80,132 @@
   when:
     - "{{ stat_result.results[0].stat.exists }} is false"
 
-# - name: create my.conf
-#   template:
-#     src: my.cnf.j2
-#     dest: "/etc/my.cnf"
-#     owner: "root"
-#     group: "root"
-#     mode: 0644
-#   notify:
-#     - restart mysql
+- name: create my.conf
+  template:
+    src: my.cnf.j2
+    dest: "/etc/my.cnf"
+    owner: "root"
+    group: "root"
+    mode: 0644
+  notify:
+    - restart mysql
 
-# - name: mysql temporary password if changed true, else false
-#   copy:
-#     content: |
-#       [mysql]
-#       user=root
-#       password={{ temporary_password }}
-#     dest: /root/.my.cnf.txt
-#     owner: root
-#     group: root
-#     mode: '0644'
 
-# - name: Print Temporary Password
+
+
+
+
+
+- name: show database list
+  shell:
+    cmd: mysql -e "show databases;" | grep -iv "-" | grep -iv database | xargs
+  register: db_result
+
+- name: set_fact database list
+  set_fact: 
+    db_list: "{{ db_result.stdout.split() }}"
+
+
+- name: print usernames
+  shell:
+    cmd: mysql -e "SELECT user FROM mysql.user;" | grep -v "user"
+  register: user_result
+
+- name: set_fact user list
+  set_fact: 
+    user_list: "{{ user_result.stdout.split() }}"
+
+
+- name: create databases
+  include_tasks: create-db.yml
+  with_items:
+    - "{{ mysqld_platform_db }}"
+
+- name: create users
+  include_tasks: create-user.yml
+  with_items:
+    - "{{ mysqld_platform_db }}"
+
+
+
+
+
+
+
+
+
+
+
+# - name: Print mysqld_platform_db is exist or not
 #   debug:
-#     msg: "{{ item.my_cnf_path }}"
+#     msg: "{{ db }}"
+  
+# - name: Print mysqld_platform_db is exist or not
+#   include_tasks: create-db.yml
+  # with_items:
+  #   - "{{ mysqld_platform_db }}"
+
+
+# - name: Print mysqld_platform_db
+#   debug:
+#     msg: "{{ item.db.database }}"
+#   with_items:
+#     - "{{ mysqld_platform_db }}"
+
+
+
+# - name: Print db_result.stdout_lines | type_debug
+#   debug:
+#     msg: "{{ item.database | str }}"
+#   with_items:
+#     - "{{ mysqld_platform_db_users }}"
+
+# - name: Print List of Databases
+#   set_fact:
+#     var: "{{ db_result.stdout_lines }}"
+
+# - name: Print foo_item
+#   debug:
+#     msg: "{{ var }}"
+#   when:
+#     - "{{ item.database }} in {{ var }}"
+#   with_items:
+#      - "{{ mysqld_platform_db_users }}"
+
+
+# - name: Print db_result.stdout_lines | type_debug
+#   debug:
+#     msg: "{{ db_result.stdout_lines | type_debug }}"
+
+# - name: Print mysqld_platform_db_users | type_debug
+#   debug:
+#     msg: "{{ mysqld_platform_db_users | type_debug }}"
+
+# - name: Print List of Databases
+#   set_fact:
+#     len: "{{ mysqld_platform_db_users | length }}"
+#   register: len_stdout
+
+# - name: Print item.database
+#   debug:
+#     msg: "{{ mysqld_platform_db_users[0] }}"
+
+# - name: Print item.database
+#   debug:
+#     msg: "{{ len | type_debug }}"
+
+# - name: Check that the somefile.conf exists
+#   stat:
+#     path: "{{ item.temp_pass_check_file }}"
 #   with_items:
 #      - "{{ mysqld_root_user }}"
+#   register: stat_result
 
-- name: Check that the somefile.conf exists
-  stat:
-    path: "{{ item.my_cnf_path }}"
-  with_items:
-     - "{{ mysqld_root_user }}"
-  register: stat_result
-
-- name: Print Result
-  debug:
-    msg: "{{ stat_result.results[0].stat.exists }}"
-  when:
-    - "{{ stat_result.results[0].stat.exists }} is true"
+# - name: Print Result
+#   debug:
+#     msg: "{{ stat_result.results[0].stat.exists }}"
+#   when:
+#     - "{{ stat_result.results[0].stat.exists }} is true"
 
 # - name: Print Users Passwords
 #   debug:

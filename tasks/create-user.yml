@@ -1,0 +1,14 @@
+---
+
+- name: set_fact database list
+  set_fact: 
+    loop_item: "{{ item.db }}"
+
+- name: create users
+  shell: |
+    mysql -e "CREATE USER '{{ item.username }}'@'{{ loop_item.host }}' IDENTIFIED BY '{{ item.password }}';"
+    mysql -e "FLUSH PRIVILEGES;"
+  when:
+    - ('{{ item.username }}' not in {{ user_list }})
+  with_items:
+    - "{{ loop_item.users }}"
