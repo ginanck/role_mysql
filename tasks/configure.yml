@@ -89,17 +89,3 @@
     mode: 0644
   notify:
     - restart mysql
-
-- name: create databases
-  include_tasks: create-db.yml
-  with_items:
-    - "{{ mysqld_db }}"
-  loop_control:
-    loop_var: db
-
-- name: create users
-  include_tasks: create-user.yml
-  with_items:
-    - "{{ mysqld_db }}"
-  loop_control:
-    loop_var: db

@@ -1,0 +1,5 @@
+---
+
+- name: print all users
+  debug:
+    msg: "{{ user_list }}"

@@ -7,3 +7,19 @@
 - name: configure mysql
   import_tasks: configure.yml
 
+- name: create databases
+  include_tasks: create-db.yml
+  with_items:
+    - "{{ mysqld_db }}"
+  loop_control:
+    loop_var: db
+
+- name: create users
+  include_tasks: create-user.yml
+  with_items:
+    - "{{ mysqld_db }}"
+  loop_control:
+    loop_var: db
+
+# - name: grant privileges to users froom remote address
+#   import_tasks: grant-user.yml

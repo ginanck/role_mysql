@@ -18,18 +18,19 @@ mysqld_root_user:
     my_cnf_path: /root/.my.cnf
     temp_pass_check_file: /etc/my.cnf.txt
 
+# 'host' should be '%' for allow from every where
+# 'host' should be '192.168.179.1' for specific host
+# 'host' should be 'localhost' for network
 mysqld_db:
   - db:
-      database: "dxfina_db"
-      host: localhost
+      database: "wp_test_db"
       users:
-      - username: "dxfina_editor"
+      - username: "wp_test_admin"
         password: "y0pohdCdRxRdCZ59T."
-      - username: "dxfina_admin"
-        password: "y0pohdCdRxRdCZ59T."
-  - db:
-      database: "wordpress_db"
-      host: localhost
-      users:
-      - username: "wordpress_admin"
-        password: "y0pohdCdRxRdCZ59T."
+        host: 'localhost'
+  # - db:
+  #     database: "wp_database"
+  #     users:
+  #     - username: "wp_admin"
+  #       password: "y0pohdCdRxRdCZ59T."
+  #       host: 'localhost'

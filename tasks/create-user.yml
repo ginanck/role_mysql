@@ -1,7 +1,13 @@
 ---
 
 - name: check users
-  include_tasks: check-user.yml
+  shell:
+    cmd: mysql -e "SELECT user FROM mysql.user;"
+  register: user_result
+
+- name: set_fact user list
+  set_fact: 
+    user_list: "{{ user_result.stdout.split() }}"
 
 - name: set_fact user list
   set_fact: 
@@ -16,21 +22,3 @@
     - ('{{ item.username }}' not in {{ user_list }})
   with_items:
     - "{{ users.users }}"
-
-# - name: set_fact user list
-#   set_fact: 
-#     user: "{{ users.users }}"
-
-# - name: get remote address
-#   include_tasks: grant-remote.yml
-#   with_items:
-#     - "{{ user }}"
-#   loop_control:
-#     loop_var: remote
-
-
-# - name: get remote address
-#   debug:
-#     msg: "{{ item.username }}"
-#   with_items:
-#     - "{{ user }}"
